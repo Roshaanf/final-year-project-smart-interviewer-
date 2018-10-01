@@ -31,6 +31,7 @@ while runLoop
     % Get the next frame.
     videoFrame = snapshot(cam);
     videoFrameGray = rgb2gray(videoFrame);
+    videoFrameForMouth=videoFrameGray;
     frameCount = frameCount + 1;
 
     if numPts < 10
@@ -142,11 +143,11 @@ while runLoop
             % Convert the box corners into the [x1 y1 x2 y2 x3 y3 x4 y4]
             % format required by insertShape.
             bboxPolygonEyes = reshape(bboxPointsEyes', 1, []);
-            
+            videoFrameForMouth(bboxPolygonEyes(2):bboxPolygonEyes(6),bboxPolygonEyes(1):bboxPolygonEyes(3))=0;
             
             % Display a bounding box around the detected face.
             videoFrame = insertShape(videoFrame, 'Polygon', bboxPolygonEyes, 'LineWidth', 3);
-
+            
            
         end
 
@@ -174,7 +175,7 @@ while runLoop
             % Convert the box corners into the [x1 y1 x2 y2 x3 y3 x4 y4]
             % format required by insertShape.
             bboxPolygonEyes = reshape(bboxPointsEyes', 1, []);
-
+            videoFrameForMouth(bboxPolygonEyes(2):bboxPolygonEyes(6),bboxPolygonEyes(1):bboxPolygonEyes(3))=0;
             % Display a bounding box around the face being tracked.
             videoFrame = insertShape(videoFrame, 'Polygon', bboxPolygonEyes, 'LineWidth', 3);
 
@@ -195,14 +196,12 @@ while runLoop
     % Mouth
     if numPtsMouth < 90
         % Detection mode
-        bboxMouth = mouthDetector.step(videoFrameGray);
-        disp(~isempty(bboxMouth));
+        bboxMouth = mouthDetector.step(videoFrameForMouth);
 
         if ~isempty(bboxMouth)
             % Find corner points inside the detected region.
             % uses the minimum eigenvalue algorithm developed by Shi and Tomasi to find feature points.
-            pointsMouth = detectMinEigenFeatures(videoFrameGray, 'ROI', bboxMouth(1, :));
-            disp('coming coming')
+            pointsMouth = detectMinEigenFeatures(videoFrameForMouth, 'ROI', bboxMouth(1, :));
 
             % Re-initialize the point tracker.
             xyPointsMouth = pointsMouth.Location;
@@ -211,7 +210,7 @@ while runLoop
             numPtsMouth = size(xyPointsMouth,1);
             
             release(pointTrackerMouth);
-            initialize(pointTrackerMouth, xyPointsMouth, videoFrameGray);
+            initialize(pointTrackerMouth, xyPointsMouth, videoFrameForMouth);
            
             % Save a copy of the points.
             oldPointsMouth = xyPointsMouth;
@@ -234,7 +233,7 @@ while runLoop
 
     else
         % Tracking mode.
-        [xyPointsMouth, isFoundMouth] = step(pointTrackerMouth, videoFrameGray);
+        [xyPointsMouth, isFoundMouth] = step(pointTrackerMouth, videoFrameForMouth);
         
         visiblePointsMouth = xyPointsMouth(isFoundMouth, :);
         
@@ -276,7 +275,7 @@ while runLoop
 end
 
 % Clean up.
-clear cam;
+clear cam;   
 release(videoPlayer);
 release(pointTracker);
 release(pointTrackerEyes);
